@@ -1,0 +1,11 @@
+.idea
+.mvn
+.vscode
+*/**/test/
+target
+.gitattributes
+.gitignore
+HELP.md
+mvnw
+mvnw.cmd
+dir-to-text/

@@ -1,0 +1,12 @@
+# Configurações do servidor
+server:
+  port: 3000
+
+spring:
+  application:
+    name: ScoreAPI
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: score_group
+      auto-offset-reset: earliest
