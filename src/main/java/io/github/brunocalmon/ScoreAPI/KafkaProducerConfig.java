@@ -27,8 +27,8 @@ public class KafkaProducerConfig {
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        producerProps.put(ProducerConfig.ACKS_CONFIG, "all"); // Garantir que a mensagem foi persistida
-
+        producerProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        
         ProducerFactory<String, String> producerFactory = new DefaultKafkaProducerFactory<>(producerProps);
         return new KafkaTemplate<>(producerFactory);
     }

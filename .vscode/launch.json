@@ -10,7 +10,8 @@
             "request": "launch",
             "mainClass": "io.github.brunocalmon.ScoreAPI.ScoreApiApplication",
             "projectName": "ScoreAPI",
-            "preLaunchTask": "mvn clean install -DskipTests"
+            "preLaunchTask": "mvn clean install -DskipTests",
+            "postDebugTask": "Deleting Target" 
         }
     ]
 }

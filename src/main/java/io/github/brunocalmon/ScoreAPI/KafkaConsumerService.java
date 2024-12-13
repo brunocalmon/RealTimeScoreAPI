@@ -32,7 +32,7 @@ public class KafkaConsumerService {
                 logger.debug("Message sent to emitter: {}", emitter);
             } catch (Exception e) {
                 logger.error("Failed to send message to emitter: {}", emitter, e);
-                iterator.remove(); // Safely remove emitter
+                iterator.remove();
                 logger.info("Emitter removed due to failure: {}", emitter);
             }
         }

@@ -1,0 +1,115 @@
+name: Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  VERSION: ''  # Definindo a variável globalmente no início do arquivo
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Run tests
+        run: mvn test --file pom.xml
+
+  build:
+    runs-on: ubuntu-22.04
+    outputs:
+      api-version: ${{ steps.extract_version.outputs.VERSION }}
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: score-api
+          path: target/*.jar
+      - name: Extract version from JAR file name
+        id: extract_version
+        run: |
+          JAR_FILE=$(ls ./target/ScoreAPI-*.jar)
+          VERSION=$(echo $JAR_FILE | sed -E 's/^.*ScoreAPI-([0-9]+\.[0-9]+\.[0-9]+)(-SNAPSHOT)?\.jar$/\1/')
+          echo "Version extracted: $VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:    
+      - uses: actions/checkout@v4
+       
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: score-api
+
+      - name: Check if Tag Exists
+        id: check_tag
+        run: |
+          TAG_NAME="${{ needs.build.outputs.api-version }}"  # Referenciando a variável global VERSION
+          echo "Checking if tag $TAG_NAME exists..."
+          if git rev-parse "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists."
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "Tag $TAG_NAME does not exist."
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create Tag
+        run: |
+          if [ "${{ env.TAG_EXISTS }}" = "false" ]; then
+            echo "Creating and pushing tag: ${{ needs.build.outputs.api-version }}"
+            git tag ${{ needs.build.outputs.api-version }}
+            git push origin --force ${{ needs.build.outputs.api-version }}
+          else
+            echo "Tag ${{ needs.build.outputs.api-version }} already exists, skipping tag creation."
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ScoreAPI-*.jar
+          tag_name: ${{ needs.build.outputs.api-version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-publish:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: score-api
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }} .
+          docker images --format "{{.Repository}}:{{.Tag}}"
+      - name: Log in to Docker Hub
+        run: |
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push Docker Image
+        run: |
+          docker images --format "{{.Repository}}:{{.Tag}}"
+          docker push ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }}

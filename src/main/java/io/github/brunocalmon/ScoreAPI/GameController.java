@@ -18,11 +18,9 @@ public class GameController {
 
     @PostMapping("/start")
     public ResponseEntity<GameSimulationResponse> startGame(@RequestParam int frequency, @RequestParam int shards) {
-        // Limita o número de threads para 10
         int numThreads = Math.min(shards, 10);
         kafkaProducerService.startGameSimulation(frequency, numThreads);
 
-        // Return a response confirming the start of the simulation
         return ResponseEntity.accepted().body(new GameSimulationResponse(
                 "success",
                 "Game simulations started successfully.",
