@@ -78,6 +78,10 @@ jobs:
             echo "Tag ${{ needs.build.outputs.api-version }} does not exist."
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
           fi
+      - name: Set Git User Identity
+        run: |
+          git config --global user.email "brunoxaviercalmon.br@gmail.com"
+          git config --global user.name "${{ github.actor }}"
 
       - name: Create Tag
         if: env.TAG_EXISTS == 'false'
