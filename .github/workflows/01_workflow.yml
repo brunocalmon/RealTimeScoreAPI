@@ -65,17 +65,18 @@ jobs:
       - name: Check if Tag Exists
         id: check_tag
         run: |
-          TAG_NAME="${{ needs.build.outputs.api-version }}"  # Referenciando a variável global VERSION
-          echo "Checking if tag $TAG_NAME exists..."
-          if git rev-parse "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists."
+          echo "Checking if tag ${{ needs.build.outputs.api-version }} exists..."
+          if git tag -l ${{ needs.build.outputs.api-version }} | grep -q .; then
+            echo "Tag ${{ needs.build.outputs.api-version }} already exists."
             echo "TAG_EXISTS=true" >> $GITHUB_ENV
           else
-            echo "Tag $TAG_NAME does not exist."
+            echo "Tag ${{ needs.build.outputs.api-version }} does not exist."
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
           fi
 
+
       - name: Create Tag
+        if: env.TAG_EXISTS == 'false'
         run: |
           if [ "${{ env.TAG_EXISTS }}" = "false" ]; then
             echo "Creating and pushing tag: ${{ needs.build.outputs.api-version }}"
@@ -86,6 +87,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
+        if: env.TAG_EXISTS == 'false'
         uses: softprops/action-gh-release@v2
         with:
           files: ScoreAPI-*.jar
@@ -104,11 +106,6 @@ jobs:
         with:
           name: score-api
 
-      - name: Build Docker Image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }} .
-          docker images --format "{{.Repository}}:{{.Tag}}"
-
       - name: Check if Docker Image Tag Exists
         id: check_tag_exists
         run: |
@@ -126,7 +123,13 @@ jobs:
           else
             echo "Docker image tag $TAG does not exist. Proceeding with push."
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
-          fi
+          fi          
+
+      - name: Build Docker Image
+        if: env.TAG_EXISTS == 'false'
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }} .
+          docker images --format "{{.Repository}}:{{.Tag}}"
 
       - name: Log in to Docker Hub
         if: env.TAG_EXISTS == 'false'
