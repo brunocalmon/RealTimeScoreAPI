@@ -98,18 +98,44 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: score-api
+
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }} .
           docker images --format "{{.Repository}}:{{.Tag}}"
+
+      - name: Check if Docker Image Tag Exists
+        id: check_tag_exists
+        run: |
+          TAG="${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }}"
+          echo "Checking if Docker image tag $TAG exists..."
+          
+          # Verificando no Docker Hub se a tag já existe
+          response=$(curl --write-out "%{http_code}" --silent --output /dev/null \
+            -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/score-api/tags/${{ needs.build.outputs.api-version }}")
+          
+          if [ "$response" -eq 200 ]; then
+            echo "Docker image tag $TAG already exists. Skipping push."
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "Docker image tag $TAG does not exist. Proceeding with push."
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+
       - name: Log in to Docker Hub
+        if: env.TAG_EXISTS == 'false'
         run: |
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Push Docker Image
+        if: env.TAG_EXISTS == 'false'
         run: |
-          docker images --format "{{.Repository}}:{{.Tag}}"
           docker push ${{ secrets.DOCKER_USERNAME }}/score-api:${{ needs.build.outputs.api-version }}
+          docker images --format "{{.Repository}}:{{.Tag}}"
+
