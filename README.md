@@ -119,11 +119,19 @@ To bring up the required services (Kafka and Zookeeper) in Docker containers, ru
 ```bash
 docker compose up --build -d
 ```
+OR
+```bash
+docker compose --profile api up --build -d
+```
 
 To stop the services:
 
 ```bash
 docker compose down
+```
+OR
+```bash
+docker compose --profile api down
 ```
 
 ### 2. **Build the Project (Maven)**

@@ -58,6 +58,21 @@ services:
       - kafka
       - zookeeper
 
+  score-api:
+    profiles:
+      - api
+    networks:
+      - kafka-network
+    image: brunocalmon/score-api:0.0.2
+    container_name: score-api
+    ports:
+      - "3000:3000"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+    depends_on:
+      - kafka
+      - zookeeper
+
 #volumes:
 #  kafka-data:
 #    driver: local
@@ -70,4 +85,3 @@ networks:
   kafka-network:
     name: kafka-network
     driver: bridge
-
